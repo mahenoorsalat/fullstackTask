@@ -3,96 +3,100 @@ import Application from "../models/ApplicationModel.js";
 import Job from "../models/jobModels.js";
 
 
-export const applyToJob = async (req , res)=>{
-    if(req.user.role !== 'seeker'){
+export const applyToJob = async (req, res) => {
+    if (req.user.role !== 'seeker') {
         res.status(403)
         throw new Error('Only job seekers can apply to this job')
     }
     const jobId = req.params.id;
 
     const seekerId = req.user._id;
-    const job = await findById(jobId);
+    const job = await Job.findById(jobId);
 
-    if(!job) {
+    if (!job) {
         res.status(404);
         throw new Error('Job not found');
     }
 
     const application = await Application.create({
-        jobId  ,
-        seekerId , 
-        status : 'Applied'
+        jobId,
+        seekerId,
+        status: 'Applied'
     })
 
     res.status(201).json({
-        message : 'Application submitted successfully ' , application
+        message: 'Application submitted successfully ', application
     })
 
 
 };
 
-export const getSeekerApplications = async(req , res)=>{
-    if(req.user.role !== 'seeker'){
+export const getSeekerApplications = async (req, res) => {
+    if (req.user.role !== 'seeker') {
         res.status(403)
         throw new Error('Only job seekers can view their own applications');
     }
 
-    const applications = await Application.findById({seekerId : req.user._id})
-    .populate({
-        path:'jobId',
-        select : 'title location salaryMin salaryMax' , 
-        populate : {
-            path : 'employerId' , 
-            select : 'name logo'
-        }
-    })
-    .sort({createdAt : -1})
-res.send(applications)
+    const applications = await Application.find({ seekerId: req.user._id })
+        .populate({
+            path: 'jobId',
+            select: 'title location salaryMin salaryMax',
+            populate: {
+                path: 'employerId',
+                select: 'name logo'
+            }
+        })
+        .sort({ createdAt: -1 })
+    res.send(applications)
 };
 
-export const getApplicationForJob = async(req , res)=>{
-    if(req.user.role !== 'company'){
-           res.status(403)
+export const getApplicationForJob = async (req, res) => {
+    if (req.user.role !== 'company') {
+        res.status(403)
         throw new Error('Only job seekers can apply to this job')
     }
 
     const jobId = req.params.id;
 
     const job = await Job.findById(jobId)
-    if(!job || job.employerId.toString() !== req.user._id.toString()){
+    if (!job || job.employerId.toString() !== req.user._id.toString()) {
         res.status(404);
         throw new Error('Job not found or unauthorized access');
     }
 
-      const applications = await Application.findById({seekerId : req.user._id})
-    .populate({
-        path:'seekerId',
-        select : 'name email photoUrl resumeUrl skills expectedSalary' , 
-       
-    })
-    .sort({createdAt : -1})
-res.send(applications)
+    const applications = await Application.find({ jobId })
+        .populate({
+            path: 'seekerId',
+            select: 'name email photoUrl resumeUrl skills expectedSalary',
+
+        })
+        .sort({ createdAt: -1 })
+    res.send(applications)
 };
 
-export const updateApplication = async (req , res)=>{
+export const updateApplication = async (req, res) => {
     const { status } = req.body;
 
-    const application = Application.findById(req.params.id);
+    const application = await Application.findById(req.params.id).populate('jobId');
 
-    if(!application){
+    if (!application) {
         res.status(404);
         throw new Error('Application not found');
     }
 
-    const job = application.jobId;
 
-    if(job.employerId.toString() !== req.user._id.toString()|| req.user.role === admin){
+
+    if (
+        application.jobId.employerId.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin'
+    ) {
         res.status(403);
         throw new Error('Not authorized to update this application status');
     }
 
+
     const validStatuses = ['Shortlisted', 'Interviewed', 'Hired', 'Rejected'];
-    if(!validStatuses.includes(status)){
+    if (!validStatuses.includes(status)) {
         res.status(400)
         throw new Error(`Invalid Status : Must be one of the ${validStatuses.join(', ')}`)
     }

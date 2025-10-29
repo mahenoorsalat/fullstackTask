@@ -13,7 +13,7 @@ export const getJobs = async(req,res)=>{
         query.jobType = type;
     };
     if(minSalary){
-        query.salaryMin = { $regex : Number(minSalary)}
+        query.salaryMin = { $gte : Number(minSalary)}
     };
 
     const jobs = await Job.find(query)
@@ -58,7 +58,7 @@ export const createJob = async(req , res)=>{
         employerId : req.user._id , 
     })
 
-    const createdJob = await Job.bulkSave()
+    const createdJob = await Job.save()
     res.status(201).json(createJob);
 
 }

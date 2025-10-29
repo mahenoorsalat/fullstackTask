@@ -5,7 +5,7 @@ import { applyToJob , getApplicationForJob } from '../controllers/applicationCon
 const router = express.Router();
 
 router.get('/'  , getJobs);
-router.get('/' , getJobById);
+router.get('/:id' , getJobById);
 router.post('/:id/apply' , protect , role('seeker') , applyToJob)
 router.get('/:id/applications' , protect , role('company') , getApplicationForJob)
 

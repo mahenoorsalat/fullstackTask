@@ -1,4 +1,5 @@
 import User from "../models/userModels.js";
+import jwt from 'jsonwebtoken'
 
 
 const generateToken=(id)=>{
