@@ -1,4 +1,4 @@
-export const notFound = async(req  , res)=>{
+export const notFound = async(req  , res , next)=>{
     const error = new Error(`Not Found this page ${req.originalUrl}`);
     res.status(404);
     next(error);
