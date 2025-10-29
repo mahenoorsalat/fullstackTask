@@ -58,7 +58,7 @@ export const createJob = async(req , res)=>{
         employerId : req.user._id , 
     })
 
-    const createdJob = await Job.save()
+    const createdJob = await job.save()
     res.status(201).json(createJob);
 
 }
@@ -79,7 +79,7 @@ export const updateJob = async (req , res )=>{
         job.jobType = req.body.jobType || job.jobType;
         job.locationType = req.body.locationType || job.locationType;
 
-        const updatedJob = await Job.save()
+        const updatedJob = await job.save()
         res.json(updatedJob)
    } else{
 res.status(404);

@@ -41,11 +41,7 @@ const jobSchema = new mongoose.Schema({
             enum: ['Entry-level', 'Mid-level', 'Senior-level', 'Director', 'Executive'],
             required: true,
         },
-        postedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: true,
-        },
+    
         employerId:{
             type : mongoose.Schema.Types.ObjectId,
             ref : 'User',

@@ -1,5 +1,6 @@
 import User from "../models/userModels.js";
 import jwt from 'jsonwebtoken'
+import bcrypt from "bcryptjs";
 
 
 const generateToken=(id)=>{
@@ -45,9 +46,10 @@ const generateToken=(id)=>{
 
 
     export const loginUser=async(req,res)=>{
-        const{email,password}=req.body;
+     
+        const{email,password,role}=req.body;
         try{
-            const user=await User.findOne({email});
+            const user=await User.findOne({email}).select('+password');
             if(user && (await bcrypt.compare(password,user.password))){
                 if(user.role!==role){
                         return res.status(401).json({message:"Unauthorized: Role mismatch"});

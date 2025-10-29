@@ -26,7 +26,7 @@ export const protect = async(req , res , next)=>{
 
 export const role = (...roles) =>{
     return (req , res , next) =>{
-        if(!role.includes(req.user.role)){
+        if(!roles.includes(req.user.role)){
             res.status(403);
             throw new Error('User role not authorized to access this route');
         }

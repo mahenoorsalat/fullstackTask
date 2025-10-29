@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import jobRoutes from './routes/jobRoutes.js'
 import applicationRoutes from './routes/applicationRoutes.js'
+import userRoutes from './routes/userRoutes.js'
 
 dotenv.config();
 const app = express();
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes );
 app.use('/api/jobs' ,jobRoutes );
 app.use('/api/applications' , applicationRoutes)
+app.use('/api/user', userRoutes);
 app.use(notFound)
 app.use(errorHandler)
 
