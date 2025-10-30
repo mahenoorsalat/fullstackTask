@@ -44,7 +44,7 @@ export const createJob = async(req , res)=>{
         throw new Error('Only Employers can post job!')
     }
 
-    const {title , description , location , experienceLevel , salaryMin , salaryMax , jobType , LocationType } = req.body;
+    const {title , description , location , experienceLevel , salaryMin , salaryMax , jobType , locationType } = req.body;
 
     const job = new Job({
         title , 
@@ -54,12 +54,12 @@ export const createJob = async(req , res)=>{
         salaryMax , 
         salaryMin , 
         jobType , 
-        LocationType , 
+        locationType ,
         employerId : req.user._id , 
     })
 
     const createdJob = await job.save()
-    res.status(201).json(createJob);
+    res.status(201).json(createdJob);
 
 }
 

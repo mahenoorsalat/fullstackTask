@@ -106,3 +106,7 @@ export const updateApplication = async (req, res) => {
     res.json(updatedApplication)
 
 }
+
+// export const getApplicationsForCompany = async (req , res) =>{
+//     const company
+// }

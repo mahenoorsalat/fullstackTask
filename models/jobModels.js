@@ -38,7 +38,6 @@ const jobSchema = new mongoose.Schema({
         },
         experienceLevel: {
             type: String,
-            enum: ['Entry-level', 'Mid-level', 'Senior-level', 'Director', 'Executive'],
             required: true,
         },
     
