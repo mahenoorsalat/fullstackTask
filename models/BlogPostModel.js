@@ -63,6 +63,15 @@ const blogSchema = new mongoose.Schema({
     },
    comments:[commentSchema],
    reactions:[reactionSchema]
+},{
+    toJSON: {
+        virtuals: true,
+        transform: (doc, ret) => {
+            ret.id = ret._id;
+            delete ret._id;
+            delete ret.__v;
+        }
+    }
 })
 
 const BlogPost = mongoose.model('BlogPost' , blogSchema);

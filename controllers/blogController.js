@@ -10,8 +10,7 @@ export const getUserDetails = async (userId) => {
         authorId: user.id,
         authorName: user.name,
         authorRole: user.role,
-        authorPhotoUrl: `https://i.pravatar.cc/150?u=${user.email}`
-    }
+authorPhotoUrl: user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`  }
 };
 
 export const getBlogPost = async (req, res) => {

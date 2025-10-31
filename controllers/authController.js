@@ -62,23 +62,38 @@ export const loginUser = async (req, res) => {
 
     const { email, password, role } = req.body;
     try {
-        const user = await User.findOne({ email }).select('+password');
+        // FIX: Select all profile fields required by the frontend 
+        const user = await User.findOne({ email }).select('+password photoUrl resumeUrl skills expectedSalary website contactInfo officeAddress description'); // CHANGED
+        
         if (user && (await bcrypt.compare(password, user.password))) {
             if (user.role !== role) {
                 return res.status(401).json({ message: "Unauthorized: Role mismatch" });
             }
+            
+            // FIX: Return all properties to properly restore client state
             res.json({
                 _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
                 token: generateToken(user._id),
+                // ADDED PROFILE FIELDS (using || to ensure null/undefined fields return defaults instead of crashing the client):
+                photoUrl: user.photoUrl || '', 
+                resumeUrl: user.resumeUrl || '',
+                skills: user.skills || [], // Default to array
+                expectedSalary: user.expectedSalary || 0,
+                website: user.website || '',
+                contactInfo: user.contactInfo || '',
+                officeAddress: user.officeAddress || '',
+                description: user.description || '',
             });
         }
         else {
             res.status(401).json({ message: "Invalid email or password" });
         }
     } catch (error) {
+        // Added console log for better server-side debugging of the 500 error
+        console.error("Login attempt failed:", error);
         res.status(500).json({ message: "Server error" });
     }
 };
