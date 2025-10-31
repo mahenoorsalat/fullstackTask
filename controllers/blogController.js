@@ -2,53 +2,53 @@ import BlogPost from "../models/BlogPostModel.js";
 import User from "../models/userModels.js"
 
 
-export const getUserDetails = async(userId)=>{
+export const getUserDetails = async (userId) => {
     const user = await User.findById(userId).select('name  email role');
 
-    if(!user) return null;
-    return{
-        authorId : user.id,
-        authorName : user.name , 
-        authorRole : user.role , 
-        authorPhotoUrl : `https://i.pravatar.cc/150?u=${user.email}`
+    if (!user) return null;
+    return {
+        authorId: user.id,
+        authorName: user.name,
+        authorRole: user.role,
+        authorPhotoUrl: `https://i.pravatar.cc/150?u=${user.email}`
     }
 };
 
-export const getBlogPost = async (req , res) =>{
-    const post =  await BlogPost.find({})
-                     .sort({createdAt:-1})
+export const getBlogPost = async (req, res) => {
+    const post = await BlogPost.find({})
+        .sort({ createdAt: -1 })
 
-    res.json(post)  ;               
+    res.json(post);
 }
 
-export const createBlogPost = async(req, res)=>{
-    const {content} = req.body;
+export const createBlogPost = async (req, res) => {
+    const { content } = req.body;
     const userDetails = await getUserDetails(req.user._id);
 
-    if(!userDetails){
-        res.status(401).json({message : "User Not found"});
-        return ;
+    if (!userDetails) {
+        res.status(401).json({ message: "User Not found" });
+        return;
     }
 
     const newPosts = new BlogPost({
-        ...userDetails , 
+        ...userDetails,
         content
     })
     const createPost = await newPosts.save()
 
-    res.status(201).json({message : "New Blog Post Created" , post : createPost})
-    return ;
+    res.status(201).json({ message: "New Blog Post Created", post: createPost })
+    return;
 }
 
-export const updateBlogPost = async (req, res)=>{
+export const updateBlogPost = async (req, res) => {
     const postId = req.params.id;
-    const {content } = req.body;
+    const { content } = req.body;
     const post = await BlogPost.findById(postId)
-    if(!post) {
+    if (!post) {
         res.status(404);
         throw new Error('Post Not Found')
     }
-    if(req.user.role !== 'admin' && post.authorId.toString() !== req.user._id.toString()){
+    if (req.user.role !== 'admin' && post.authorId.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not Authorized to update this post ')
     }
@@ -58,14 +58,14 @@ export const updateBlogPost = async (req, res)=>{
     return;
 };
 
-export const deleteBlogPost = async (req , res)=>{
-  const postId = req.params.id;
+export const deleteBlogPost = async (req, res) => {
+    const postId = req.params.id;
     const post = await BlogPost.findById(postId)
-    if(!post){
+    if (!post) {
         res.status(404);
         throw new Error('Post Not Found')
     }
-    if(req.user.role !== 'admin' && post.authorId.toString() !== req.user._id.toString()){
+    if (req.user.role !== 'admin' && post.authorId.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not Authorized to update this post ')
     }
@@ -74,58 +74,58 @@ export const deleteBlogPost = async (req , res)=>{
     res.status(204).send()
 };
 
-export const addOrUpdateReactions = async (req , res) =>{
+export const addOrUpdateReactions = async (req, res) => {
     const postId = req.params.id;
-    const {type} = req.body;
+    const { type } = req.body;
     const userDetails = await getUserDetails(req.user._id);
-    if(!userDetails){
-        res.status(401).json({message : "User Not found"});
+    if (!userDetails) {
+        res.status(401).json({ message: "User Not found" });
         return;
     }
     const reactionUserId = userDetails.authorId;
     const post = await BlogPost.findById(postId)
 
-    if(!post){
+    if (!post) {
         res.status(404);
         throw new Error('Post Not Found')
     }
 
-    const existingReaction = post.reactions.findIndex(r => r.userId.toString() === reactionUserId.toString());
-
-    if(existingReaction){
-        if(existingReaction.type === type){
-            post.reactions.splice(existingReaction , 1)
+    const existingReactionIndex = post.reactions.findIndex(r => r.userId.toString() === reactionUserId.toString());
+    const existingReaction = existingReactionIndex !== -1 ? post.reactions[existingReactionIndex] : null;
+    if (existingReaction) {
+        if (existingReaction.type === type) {
+            post.reactions.splice(existingReactionIndex, 1)
         }
-        else{
-       existingReaction.type = type ;
+        else {
+            existingReaction.type = type;
         }
     }
-    else{
-        post.reactions.push({userId : reactionUserId , type})
+    else {
+        post.reactions.push({ userId: reactionUserId, type })
     }
 
     const updatedPost = await post.save();
     res.json(updatedPost);
 }
 
-export const addComment  = async(req , res)=>{
-       const postId = req.params.id;
-    const {content} = req.body;
+export const addComment = async (req, res) => {
+    const postId = req.params.id;
+    const { content } = req.body;
     const post = await BlogPost.findById(postId)
- const userDetails = await getUserDetails(req.user._id);
+    const userDetails = await getUserDetails(req.user._id);
 
-    if(!userDetails){
-        res.status(401).json({message : "User Not found"});
+    if (!userDetails) {
+        res.status(401).json({ message: "User Not found" });
     }
-       if(!post){
+    if (!post) {
         res.status(404);
         throw new Error('Post Not Found')
     }
 
     const newComment = {
-        ...userDetails , 
+        ...userDetails,
         content,
-        createdAt : new Date()
+        createdAt: new Date()
     }
 
     post.comments.push(newComment)
@@ -133,19 +133,19 @@ export const addComment  = async(req , res)=>{
     res.json(updatedPost)
 }
 
-export const updateComment = async (req , res)=>{
-       const {postId , commentId} = req.params;
-    const {content} = req.body;
+export const updateComment = async (req, res) => {
+    const { postId, commentId } = req.params;
+    const { content } = req.body;
     const post = await BlogPost.findById(postId)
- const comment = post.comments.id(commentId);
+    const comment = post.comments.id(commentId);
     if (!comment) { res.status(404); throw new Error('Comment not found'); }
 
-    if(req.user.role !== 'admin' && comment.authorId.toString() !== req.user._id.toString()){
+    if (req.user.role !== 'admin' && comment.authorId.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not authorized to update this comment');
     }
-   
-       if(!post){
+
+    if (!post) {
         res.status(404);
         throw new Error('Post Not Found')
     }
@@ -155,14 +155,14 @@ export const updateComment = async (req , res)=>{
     res.json(updatedPost)
 };
 
-export const deleteComment = async(req , res)=>{
-      const {postId , commentId} = req.params;
-    const {content} = req.body;
+export const deleteComment = async (req, res) => {
+    const { postId, commentId } = req.params;
+    const { content } = req.body;
     const post = await BlogPost.findById(postId)
- const comment = post.comments.id(commentId);
+    const comment = post.comments.id(commentId);
     if (!comment) { res.status(404); throw new Error('Comment not found'); }
 
-    if(req.user.role !== 'admin' && comment.authorId.toString() !== req.user._id.toString()){
+    if (req.user.role !== 'admin' && comment.authorId.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not authorized to update this comment');
     };

@@ -21,6 +21,34 @@ const UserSchema = mongoose.Schema(
             enum :['admin' , 'company' , 'seeker'],
             required: true,
         },
+        
+       
+        photoUrl: { 
+            type: String,
+        },
+        resumeUrl: { 
+            type: String,
+        },
+        expectedSalary: { 
+            type: Number,
+        },
+        skills: { 
+            type: [String], 
+        },
+        
+       
+        website: { 
+            type: String,
+        },
+        contactInfo: { 
+            type: String,
+        },
+        officeAddress: { 
+            type: String,
+        },
+        description: { 
+            type: String,
+        }
  
     } , {timestamps: true});
 
@@ -36,4 +64,3 @@ UserSchema.pre('save', async function (next) {
 const User = mongoose.model("User", UserSchema);
 
 export default User;
-        

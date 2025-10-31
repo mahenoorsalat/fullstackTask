@@ -84,50 +84,76 @@ export const loginUser = async (req, res) => {
 };
 
 export const getUserProfile = (req, res) => {
-    res.send("Get User Profile");
+    // FIX: Return the authenticated user object for client data refresh
+    res.json(req.user)
 };
+
 export const updateUserProfile =async (req, res) => {
     const user = await User.findById(req.user._id);
     if(!user){
         return res.status(401).json({message : 'User Not Found'});
     }
 
-   try{
+    try{
      if(user){
-        user.name = req.body.name || user.name;
-        user.email =req.body.email || user.email;
-        user.photoUrl = req.body.photoUrl || user.photoUrl;
-        user.resumeUrl = req.body.resumeUrl || user.resumeUrl;
-        user.skills = req.body.skills || user.skills;
-        user.expectedSalary = req.body.expectedSalary || user.expectedSalary;
+         user.name = req.body.name || user.name;
+         user.email =req.body.email || user.email;
+         
+         // SEEKER/SHARED FIELDS
+         user.photoUrl = req.body.photoUrl || user.photoUrl;
+         user.resumeUrl = req.body.resumeUrl || user.resumeUrl;
+         
+         // SEEKER SPECIFIC FIELDS
+         // Convert comma-separated string to array if provided for 'skills'
+         if (req.body.skills && typeof req.body.skills === 'string') {
+            user.skills = req.body.skills.split(',').map(s => s.trim());
+         } else if (Array.isArray(req.body.skills)) {
+             user.skills = req.body.skills;
+         }
+         user.expectedSalary = req.body.expectedSalary || user.expectedSalary;
+         
+         // COMPANY SPECIFIC FIELDS
+         user.website = req.body.website || user.website;
+         user.contactInfo = req.body.contactInfo || user.contactInfo;
+         user.officeAddress = req.body.officeAddress || user.officeAddress;
+         user.description = req.body.description || user.description;
 
-        if(req.body.password){
-            user.password = req.body.password;
-        }
+         if(req.body.password){
+             user.password = req.body.password;
+         }
 
-        const updatedUser = await user.save();
-        res.json({
-            id : updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            role:updatedUser.role,
-            token : generateToken(updatedUser._id),
-            photoUrl : updateUserProfile.photoUrl , 
-            resumeUrl : updateUserProfile.resumeUrl,
-            skills : updateUserProfile.skills , 
-            expectedSalary : updateUserProfile.expectedSalary , 
-            message : "User Updated"
-        })
-    }
+         const updatedUser = await user.save();
+         
+         // Return the newly updated user object including the token for client persistence
+         res.json({
+             _id : updatedUser._id,
+             name: updatedUser.name,
+             email: updatedUser.email,
+             role: updatedUser.role,
+             token : generateToken(updatedUser._id),
+             // Return all possible fields so the client state is complete
+             photoUrl : updatedUser.photoUrl,
+             resumeUrl : updatedUser.resumeUrl,
+             skills : updatedUser.skills, 
+             expectedSalary : updatedUser.expectedSalary,
+             website : updatedUser.website,
+             contactInfo : updatedUser.contactInfo,
+             officeAddress : updatedUser.officeAddress,
+             description : updatedUser.description,
+             message : "User Updated"
+         })
+     }
 
-    else{
-        res.status(401).json({message : "User Not Found"});
+     else{
+         res.status(401).json({message : "User Not Found"});
+     }
+    }catch(error){
+     if(error.code=== 11000){
+         // Handle duplicate key error (for email field)
+         return res.status(400).json({message : "A user with this email already exists."})
+     }
+     // Propagate other errors
+     res.status(500).json({message : `Server error during profile update ${error.message}`})
     }
-   }catch(error){
-    if(error.code=== 11000){
-        return res.status(400).json({message : "A user with this email already exists or the email field is required."})
-    }
-    res.status(500).json({message : `Server error during profile update ${error.message}`})
-   }
     
 };
