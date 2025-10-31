@@ -92,9 +92,14 @@ export const updateUserProfile =async (req, res) => {
         return res.status(401).json({message : 'User Not Found'});
     }
 
-    if(user){
+   try{
+     if(user){
         user.name = req.body.name || user.name;
         user.email =req.body.email || user.email;
+        user.photoUrl = req.body.photoUrl || user.photoUrl;
+        user.resumeUrl = req.body.resumeUrl || user.resumeUrl;
+        user.skills = req.body.skills || user.skills;
+        user.expectedSalary = req.body.expectedSalary || user.expectedSalary;
 
         if(req.body.password){
             user.password = req.body.password;
@@ -106,12 +111,23 @@ export const updateUserProfile =async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             role:updatedUser.role,
-            ...req.body
-        } , {message : "User Updated"})
+            token : generateToken(updatedUser._id),
+            photoUrl : updateUserProfile.photoUrl , 
+            resumeUrl : updateUserProfile.resumeUrl,
+            skills : updateUserProfile.skills , 
+            expectedSalary : updateUserProfile.expectedSalary , 
+            message : "User Updated"
+        })
     }
 
     else{
         res.status(401).json({message : "User Not Found"});
     }
+   }catch(error){
+    if(error.code=== 11000){
+        return res.status(400).json({message : "A user with this email already exists or the email field is required."})
+    }
+    res.status(500).json({message : `Server error during profile update ${error.message}`})
+   }
     
 };

@@ -27,6 +27,7 @@ export const createBlogPost = async(req, res)=>{
 
     if(!userDetails){
         res.status(401).json({message : "User Not found"});
+        return ;
     }
 
     const newPosts = new BlogPost({
@@ -36,6 +37,7 @@ export const createBlogPost = async(req, res)=>{
     const createPost = await newPosts.save()
 
     res.status(201).json({message : "New Blog Post Created" , post : createPost})
+    return ;
 }
 
 export const updateBlogPost = async (req, res)=>{
@@ -51,12 +53,13 @@ export const updateBlogPost = async (req, res)=>{
         throw new Error('Not Authorized to update this post ')
     }
     post.content = content || post.content;
-    const updatedPost = post.save()
+    const updatedPost = await post.save()
     res.json(updatedPost)
+    return;
 };
 
 export const deleteBlogPost = async (req , res)=>{
-    const postId = req.params.id;
+  const postId = req.params.id;
     const post = await BlogPost.findById(postId)
     if(!post){
         res.status(404);
@@ -74,7 +77,11 @@ export const deleteBlogPost = async (req , res)=>{
 export const addOrUpdateReactions = async (req , res) =>{
     const postId = req.params.id;
     const {type} = req.body;
-    const userDetails = getUserDetails(req.user._id);
+    const userDetails = await getUserDetails(req.user._id);
+    if(!userDetails){
+        res.status(401).json({message : "User Not found"});
+        return;
+    }
     const reactionUserId = userDetails.authorId;
     const post = await BlogPost.findById(postId)
 
@@ -83,11 +90,11 @@ export const addOrUpdateReactions = async (req , res) =>{
         throw new Error('Post Not Found')
     }
 
-    const existingReaction = post.reactions.find(r => r.userId.toString() === reactionUserId.toString());
+    const existingReaction = post.reactions.findIndex(r => r.userId.toString() === reactionUserId.toString());
 
     if(existingReaction){
         if(existingReaction.type === type){
-            post.reactions.filter(r => r.userId.toString() === reactionUserId.toString())
+            post.reactions.splice(existingReaction , 1)
         }
         else{
        existingReaction.type = type ;
@@ -161,6 +168,6 @@ export const deleteComment = async(req , res)=>{
     };
 
     comment.deleteOne();
-    const updatedPost = post.save();
+    const updatedPost = await post.save();
     res.json(updatedPost);
 }
