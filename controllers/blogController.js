@@ -3,7 +3,7 @@ import User from "../models/userModels.js"
 
 
 export const getUserDetails = async (userId) => {
-    const user = await User.findById(userId).select('name  email role');
+ const user = await User.findById(userId).select('name email role photoUrl');
 
     if (!user) return null;
     return {

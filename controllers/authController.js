@@ -30,6 +30,15 @@ export const registerUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 token: generateToken(user._id),
+                // FIX: Include all profile fields for client persistence
+                photoUrl: user.photoUrl,
+                resumeUrl: user.resumeUrl,
+                skills: user.skills,
+                expectedSalary: user.expectedSalary,
+                website: user.website,
+                contactInfo: user.contactInfo,
+                officeAddress: user.officeAddress,
+                description: user.description,
             });
         }
         else {
@@ -84,6 +93,15 @@ export const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       token: generateToken(user._id),
+      // FIX: Include all profile fields for client persistence
+      photoUrl: user.photoUrl,
+      resumeUrl: user.resumeUrl,
+      skills: user.skills,
+      expectedSalary: user.expectedSalary,
+      website: user.website,
+      contactInfo: user.contactInfo,
+      officeAddress: user.officeAddress,
+      description: user.description,
     });
   } catch (error) {
     console.error("Login error:", error);
