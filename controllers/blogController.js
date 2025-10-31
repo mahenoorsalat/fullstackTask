@@ -56,7 +56,7 @@ export const updateBlogPost = async (req, res)=>{
 };
 
 export const deleteBlogPost = async (req , res)=>{
-    const {postId} = req.params.id;
+    const postId = req.params.id;
     const post = await BlogPost.findById(postId)
     if(!post){
         res.status(404);
@@ -74,7 +74,8 @@ export const deleteBlogPost = async (req , res)=>{
 export const addOrUpdateReactions = async (req , res) =>{
     const postId = req.params.id;
     const {type} = req.body;
-    const userId = getUserDetails(req.user._id);
+    const userDetails = getUserDetails(req.user._id);
+    const reactionUserId = userDetails.authorId;
     const post = await BlogPost.findById(postId)
 
     if(!post){
@@ -82,18 +83,18 @@ export const addOrUpdateReactions = async (req , res) =>{
         throw new Error('Post Not Found')
     }
 
-    const existingReaction = post.reactions.find(r => r.userId.toString() === userId.toString());
+    const existingReaction = post.reactions.find(r => r.userId.toString() === reactionUserId.toString());
 
     if(existingReaction){
         if(existingReaction.type === type){
-            post.reactions.filter(r => r.userId.toString() === userId.toString())
+            post.reactions.filter(r => r.userId.toString() === reactionUserId.toString())
         }
         else{
        existingReaction.type = type ;
         }
     }
     else{
-        post.reactions.push({userId , type})
+        post.reactions.push({userId : reactionUserId , type})
     }
 
     const updatedPost = await post.save();

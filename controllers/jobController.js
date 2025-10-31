@@ -107,6 +107,6 @@ res.status(404);
 };
 
 export const getEmployerJobs = async (req , res)=>{
-    const jobs = (await Job.find({employerId : req.user._id})).sort({createdAt : -1});
+    const jobs = await Job.find({employerId : req.user._id}).sort({createdAt : -1});
     res.json(jobs)
 }

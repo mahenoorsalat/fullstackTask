@@ -5,6 +5,8 @@ import { applyToJob , getApplicationForJob } from '../controllers/applicationCon
 const router = express.Router();
 
 router.get('/'  , getJobs);
+router.get('/employer/jobs' , protect , role('company') , getEmployerJobs)
+
 router.get('/:id' , getJobById);
 router.post('/:id/apply' , protect , role('seeker') , applyToJob)
 router.get('/:id/applications' , protect , role('company') , getApplicationForJob)
@@ -17,6 +19,5 @@ router.route('/:id')
 .put(protect , role('company') , updateJob)
 .delete(protect , role('company' , 'admin') , deleteJob);
 
-router.get('/employer/jobs' , protect , role('company') , getEmployerJobs)
 
 export default router;
