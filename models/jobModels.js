@@ -47,7 +47,18 @@ const jobSchema = new mongoose.Schema({
             required : true,
         }
 
-        } , {timestamps:true});
+        } , {
+            timestamps:true,
+            // FIX: Add toJSON configuration to map _id to id for the frontend
+            toJSON: {
+                virtuals: true,
+                transform: (doc, ret) => {
+                    ret.id = ret._id.toString();
+                    delete ret._id;
+                    delete ret.__v;
+                }
+            }
+        }); // CHANGED: Added schema options
 
 const Job = mongoose.model('Job', jobSchema);
 export default Job;
