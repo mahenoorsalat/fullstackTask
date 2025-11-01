@@ -16,6 +16,11 @@ const jobSchema = new mongoose.Schema({
             required: true,
         
         },
+        applicants:{
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: 'User',
+            default: [],
+        },
         salaryMin: {
             type: Number,
             required: true,
