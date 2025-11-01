@@ -58,7 +58,6 @@ export const getUsersByRole = async (req, res) => {
         throw new Error('Invalid user role specified.');
     }
 
-    // Fetch users, excluding the password field for security
     const users = await User.find({ role }).select('-password').sort({ name: 1 });
 
     res.json(users);
@@ -93,7 +92,6 @@ export const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       token: generateToken(user._id),
-      // FIX: Include all profile fields for client persistence
       photoUrl: user.photoUrl,
       resumeUrl: user.resumeUrl,
       skills: user.skills,
@@ -125,7 +123,12 @@ export const updateUserProfile =async (req, res) => {
          user.name = req.body.name || user.name;
          user.email =req.body.email || user.email;
          
-user.photoUrl = req.body.hasOwnProperty('photoUrl') ? req.body.photoUrl : user.photoUrl;
+        if (req.body.hasOwnProperty('logo')) {
+            user.photoUrl = req.body.logo;
+        } else if (req.body.hasOwnProperty('photoUrl')) {
+            user.photoUrl = req.body.photoUrl;
+        }
+         
          user.resumeUrl = req.body.hasOwnProperty('resumeUrl') ? req.body.resumeUrl : user.resumeUrl;
          
        if (req.body.skills && typeof req.body.skills === 'string') {
@@ -170,10 +173,8 @@ user.photoUrl = req.body.hasOwnProperty('photoUrl') ? req.body.photoUrl : user.p
      }
     }catch(error){
      if(error.code=== 11000){
-         // Handle duplicate key error (for email field)
          return res.status(400).json({message : "A user with this email already exists."})
      }
-     // Propagate other errors
      res.status(500).json({message : `Server error during profile update ${error.message}`})
     }
     
