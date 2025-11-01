@@ -25,7 +25,7 @@ export const applyToJob = async (req, res) => {
         throw new Error('You have already applied to this job');
     }
 
-    const application = await Application.create({
+const application = await Application.create({
         jobId,
         seekerId,
         status: 'Shortlisted' 
