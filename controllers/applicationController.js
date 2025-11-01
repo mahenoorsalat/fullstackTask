@@ -68,8 +68,7 @@ export const getApplicationForJob = async (req, res) => {
         res.status(403)
 throw new Error('Only companies can view applications for this job')    }
 
-    const jobId = req.params.id;
-
+const jobId = req.params.jobId;
     const job = await Job.findById(jobId)
     if (!job || job.employerId.toString() !== req.user._id.toString()) {
         res.status(404);
