@@ -19,10 +19,29 @@ export const getUserDetails = async (userId) => {
 };
 
 export const getBlogPost = async (req, res) => {
-    const post = await BlogPost.find({})
+    const posts = await BlogPost.find({})
         .sort({ createdAt: -1 })
+        .populate({
+            path: 'authorId',
+            select: 'description website contactInfo officeAddress', // Select company profile fields
+        });
+        
+    const transformedPosts = posts.map(post => {
+        const postObject = post.toObject({ virtuals: true }); 
 
-    res.json(post);
+        if (postObject.authorId && postObject.authorRole === 'company') {
+            postObject.companyDescription = postObject.authorId.description;
+            postObject.companyWebsite = postObject.authorId.website;
+            postObject.companyContactInfo = postObject.authorId.contactInfo;
+            postObject.companyOfficeAddress = postObject.authorId.officeAddress;
+        }
+
+        delete postObject.authorId; 
+        
+        return postObject;
+    });
+
+    res.json(transformedPosts);
 }
 
 export const createBlogPost = async (req, res) => {
