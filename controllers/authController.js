@@ -110,8 +110,8 @@ export const loginUser = async (req, res) => {
 };
 
 export const getUserProfile = (req, res) => {
-    // FIX: Return the authenticated user object for client data refresh
-    res.json(req.user)
+ 
+    res.json(req.user.toObject());
 };
 
 export const updateUserProfile =async (req, res) => {
@@ -125,39 +125,34 @@ export const updateUserProfile =async (req, res) => {
          user.name = req.body.name || user.name;
          user.email =req.body.email || user.email;
          
-         // SEEKER/SHARED FIELDS
-         user.photoUrl = req.body.photoUrl || user.photoUrl;
-         user.resumeUrl = req.body.resumeUrl || user.resumeUrl;
+user.photoUrl = req.body.hasOwnProperty('photoUrl') ? req.body.photoUrl : user.photoUrl;
+         user.resumeUrl = req.body.hasOwnProperty('resumeUrl') ? req.body.resumeUrl : user.resumeUrl;
          
-         // SEEKER SPECIFIC FIELDS
-         // Convert comma-separated string to array if provided for 'skills'
-         if (req.body.skills && typeof req.body.skills === 'string') {
+       if (req.body.skills && typeof req.body.skills === 'string') {
             user.skills = req.body.skills.split(',').map(s => s.trim());
          } else if (Array.isArray(req.body.skills)) {
              user.skills = req.body.skills;
+         } else if (req.body.hasOwnProperty('skills')) {
+             user.skills = req.body.skills;
          }
-         user.expectedSalary = req.body.expectedSalary || user.expectedSalary;
+         user.expectedSalary = req.body.hasOwnProperty('expectedSalary') ? req.body.expectedSalary : user.expectedSalary;
          
-         // COMPANY SPECIFIC FIELDS
-         user.website = req.body.website || user.website;
-         user.contactInfo = req.body.contactInfo || user.contactInfo;
-         user.officeAddress = req.body.officeAddress || user.officeAddress;
-         user.description = req.body.description || user.description;
-
+         user.website = req.body.hasOwnProperty('website') ? req.body.website : user.website;
+         user.contactInfo = req.body.hasOwnProperty('contactInfo') ? req.body.contactInfo : user.contactInfo;
+         user.officeAddress = req.body.hasOwnProperty('officeAddress') ? req.body.officeAddress : user.officeAddress;
+         user.description = req.body.hasOwnProperty('description') ? req.body.description : user.description;
          if(req.body.password){
              user.password = req.body.password;
          }
 
          const updatedUser = await user.save();
          
-         // Return the newly updated user object including the token for client persistence
-         res.json({
+     res.json({
              _id : updatedUser._id,
              name: updatedUser.name,
              email: updatedUser.email,
              role: updatedUser.role,
              token : generateToken(updatedUser._id),
-             // Return all possible fields so the client state is complete
              photoUrl : updatedUser.photoUrl,
              resumeUrl : updatedUser.resumeUrl,
              skills : updatedUser.skills, 
