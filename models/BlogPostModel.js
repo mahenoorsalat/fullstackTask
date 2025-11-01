@@ -59,7 +59,6 @@ const blogSchema = new mongoose.Schema({
     },
     authorPhotoUrl : {
         type : String, 
-        default : 'https://via.placeholder.com/150'
     },
    comments:[commentSchema],
    reactions:[reactionSchema]

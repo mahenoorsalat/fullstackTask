@@ -3,14 +3,19 @@ import User from "../models/userModels.js"
 
 
 export const getUserDetails = async (userId) => {
- const user = await User.findById(userId).select('name email role photoUrl');
+    const user = await User.findById(userId).select('name email role photoUrl');
 
     if (!user) return null;
+
+    const photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
+
     return {
         authorId: user.id,
         authorName: user.name,
         authorRole: user.role,
-authorPhotoUrl: user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`  }
+      
+        authorPhotoUrl: photoUrl  
+    }
 };
 
 export const getBlogPost = async (req, res) => {
@@ -22,7 +27,7 @@ export const getBlogPost = async (req, res) => {
 
 export const createBlogPost = async (req, res) => {
     const { content } = req.body;
-    const userDetails = await getUserDetails(req.user._id);
+    const userDetails = await getUserDetails(req.user._id); // This now returns the correct authorPhotoUrl
 
     if (!userDetails) {
         res.status(401).json({ message: "User Not found" });
@@ -30,7 +35,7 @@ export const createBlogPost = async (req, res) => {
     }
 
     const newPosts = new BlogPost({
-        ...userDetails,
+        ...userDetails, // This spreads authorId, authorName, authorRole, and the CORRECT authorPhotoUrl
         content
     })
     const createPost = await newPosts.save()
@@ -115,6 +120,7 @@ export const addComment = async (req, res) => {
 
     if (!userDetails) {
         res.status(401).json({ message: "User Not found" });
+        return;
     }
     if (!post) {
         res.status(404);
@@ -122,7 +128,8 @@ export const addComment = async (req, res) => {
     }
 
     const newComment = {
-        ...userDetails,
+     
+        ...userDetails, 
         content,
         createdAt: new Date()
     }
