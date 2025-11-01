@@ -81,6 +81,13 @@ export const deleteBlogPost = async (req, res) => {
 export const addOrUpdateReactions = async (req, res) => {
     const postId = req.params.id;
     const { type } = req.body;
+    
+    const validReactionTypes = ['like', 'love', 'dislike'];
+    if (!type || !validReactionTypes.includes(type)) {
+        res.status(400); 
+        throw new Error(`Invalid reaction type provided: "${type}". Must be one of: ${validReactionTypes.join(', ')}`);
+    }
+
     const userDetails = await getUserDetails(req.user._id);
     if (!userDetails) {
         res.status(401).json({ message: "User Not found" });
@@ -96,6 +103,7 @@ export const addOrUpdateReactions = async (req, res) => {
 
     const existingReactionIndex = post.reactions.findIndex(r => r.userId.toString() === reactionUserId.toString());
     const existingReaction = existingReactionIndex !== -1 ? post.reactions[existingReactionIndex] : null;
+    
     if (existingReaction) {
         if (existingReaction.type === type) {
             post.reactions.splice(existingReactionIndex, 1)
