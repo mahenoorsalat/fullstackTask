@@ -1,34 +1,47 @@
 
 import Application from "../models/ApplicationModel.js";
 import Job from "../models/jobModels.js";
-
+import User from "../models/userModels.js";
 
 export const applyToJob = async (req, res) => {
     if (req.user.role !== 'seeker') {
         res.status(403)
         throw new Error('Only job seekers can apply to this job')
     }
-    const jobId = req.params.id;
+    
+    const jobId = req.params.jobId; 
 
     const seekerId = req.user._id;
     const job = await Job.findById(jobId);
 
     if (!job) {
         res.status(404);
-        throw new Error('Job not found');
+        throw new Error('Job not found'); 
+    }
+    
+    const existingApplication = await Application.findOne({ jobId, seekerId });
+    if (existingApplication) {
+        res.status(400);
+        throw new Error('You have already applied to this job');
     }
 
     const application = await Application.create({
         jobId,
         seekerId,
-        status: 'Applied'
+        status: 'Shortlisted' 
     })
+
+    await Job.findByIdAndUpdate(jobId, {
+        $addToSet: { applicants: seekerId } 
+    }, { new: true });
+    
+    await User.findByIdAndUpdate(seekerId, {
+        $addToSet: { appliedJobs: jobId } 
+    }, { new: true });
 
     res.status(201).json({
         message: 'Application submitted successfully ', application
     })
-
-
 };
 
 export const getSeekerApplications = async (req, res) => {
@@ -53,8 +66,7 @@ export const getSeekerApplications = async (req, res) => {
 export const getApplicationForJob = async (req, res) => {
     if (req.user.role !== 'company') {
         res.status(403)
-        throw new Error('Only job seekers can apply to this job')
-    }
+throw new Error('Only companies can view applications for this job')    }
 
     const jobId = req.params.id;
 

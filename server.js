@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes );
 app.use('/api/jobs' ,jobRoutes );
-app.use('/api/applications' , applicationRoutes)
+app.use('/api/applications', applicationRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/blog' , blogRoutes);
 app.use(notFound)
