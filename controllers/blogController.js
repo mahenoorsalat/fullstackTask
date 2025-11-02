@@ -2,37 +2,36 @@ import BlogPost from "../models/BlogPostModel.js";
 import User from "../models/userModels.js"
 
 
+// 1. This function prepares the data for NEW posts and comments. It correctly 
+// uses the generic 'name' and 'photoUrl' fields found on your User model.
 export const getUserDetails = async (userId) => {
-    const user = await User.findById(userId).select('name email role photoUrl companyName logoUrl');
+    // Select the generic fields used by all roles, plus the role
+    const user = await User.findById(userId).select('name email role photoUrl');
 
     if (!user) return null;
 
-    let authorName;
-    let authorPhotoUrl;
-
-    if (user.role === 'company' && user.companyName) {
-        authorName = user.companyName;
-        authorPhotoUrl = user.logoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
-    } else {
-        authorName = user.name || 'Anonymous User';
-        authorPhotoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
-    }
+    // Use name and photoUrl directly, as those are the correct fields
+    const photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
+    const authorName = user.name || 'Anonymous User';
 
     return {
         authorId: user.id,
-        authorName: authorName,
+        authorName: authorName, // Company Name / Seeker Name is stored here
         authorRole: user.role,
-        authorPhotoUrl: authorPhotoUrl 
+        authorPhotoUrl: photoUrl  // Company Logo / Seeker Photo is stored here
     }
 };
 
+// 2. This function fetches the entire feed and ensures the displayed profile 
+// details are up-to-date by using the populated User data.
 export const getBlogPost = async (req, res) => {
     const posts = await BlogPost.find({})
         .sort({ createdAt: -1 })
         .populate({
             path: 'authorId',
-            // 💡 FIX 3: Select ALL relevant fields: static name/photo (for correction), company name/logo (for correction) and other company details.
-            select: 'name photoUrl companyName logoUrl description website contactInfo officeAddress', 
+            // Select all fields needed for profile DISPLAY and Company DETAILS
+            // Note: 'name' and 'photoUrl' are included to fix the display issue.
+            select: 'name photoUrl description website contactInfo officeAddress email', 
         });
         
     const transformedPosts = posts.map(post => {
@@ -40,23 +39,20 @@ export const getBlogPost = async (req, res) => {
 
         if (postObject.authorId) {
             
-            
-            if (postObject.authorRole === 'company') {
-                postObject.authorName = postObject.authorId.companyName || postObject.authorName;
-                postObject.authorPhotoUrl = postObject.authorId.logoUrl || postObject.authorPhotoUrl;
+            // 💡 FIX: Overwrite the static authorName/authorPhotoUrl on the post
+            // document with the CURRENT name and photo from the User document (authorId).
+            postObject.authorName = postObject.authorId.name || postObject.authorName;
+            postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl || `https://i.pravatar.cc/150?u=${postObject.authorId.email}`;
 
+            if (postObject.authorRole === 'company') {
+                // Attach additional company details (these were the only fields correctly populated before)
                 postObject.companyDescription = postObject.authorId.description;
                 postObject.companyWebsite = postObject.authorId.website;
                 postObject.companyContactInfo = postObject.authorId.contactInfo;
                 postObject.companyOfficeAddress = postObject.authorId.officeAddress;
-
-            } else {
-                postObject.authorName = postObject.authorId.name || postObject.authorName;
-                postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl;
             }
         }
         
-        postObject.id = postObject._id;
         delete postObject.authorId; 
         
         return postObject;
@@ -67,7 +63,7 @@ export const getBlogPost = async (req, res) => {
 
 export const createBlogPost = async (req, res) => {
     const { content } = req.body;
-    const userDetails = await getUserDetails(req.user._id); // This now returns the correct authorPhotoUrl
+    const userDetails = await getUserDetails(req.user._id); 
 
     if (!userDetails) {
         res.status(401).json({ message: "User Not found" });
@@ -75,7 +71,7 @@ export const createBlogPost = async (req, res) => {
     }
 
     const newPosts = new BlogPost({
-        ...userDetails, // This spreads authorId, authorName, authorRole, and the CORRECT authorPhotoUrl
+        ...userDetails, 
         content
     })
     const createPost = await newPosts.save()
@@ -176,7 +172,7 @@ export const addComment = async (req, res) => {
     }
 
     const newComment = {
-     
+      
         ...userDetails, 
         content,
         createdAt: new Date()
@@ -211,7 +207,6 @@ export const updateComment = async (req, res) => {
 
 export const deleteComment = async (req, res) => {
     const { postId, commentId } = req.params;
-    const { content } = req.body;
     const post = await BlogPost.findById(postId)
     const comment = post.comments.id(commentId);
     if (!comment) { res.status(404); throw new Error('Comment not found'); }
