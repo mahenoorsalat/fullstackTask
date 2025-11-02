@@ -2,35 +2,32 @@ import BlogPost from "../models/BlogPostModel.js";
 import User from "../models/userModels.js"
 
 
-// 1. This function prepares the data for NEW posts and comments. It correctly 
-// uses the generic 'name' and 'photoUrl' fields found on your User model.
+// 1. Prepares the data for NEW posts and comments.
 export const getUserDetails = async (userId) => {
-    // Select the generic fields used by all roles, plus the role
-    const user = await User.findById(userId).select('name email role photoUrl');
+    // Select the generic fields used by all roles, plus the role and email
+    const user = await User.findById(userId).select('name email role photoUrl'); // cite: mahenoorsalat/fullstacktask/fullstackTask-e7a39308b4d3642372b8bfd4b87a86b67f8bf5db/models/userModels.js
 
     if (!user) return null;
 
-    // Use name and photoUrl directly, as those are the correct fields
+    // Use name and photoUrl directly, adding a fallback to 'Anonymous' if 'name' is empty
+    const authorName = user.name || (user.role === 'company' ? 'Unknown Company' : 'Anonymous User');
     const photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
-    const authorName = user.name || 'Anonymous User';
 
     return {
         authorId: user.id,
-        authorName: authorName, // Company Name / Seeker Name is stored here
+        authorName: authorName, // Guaranteed to have a value
         authorRole: user.role,
-        authorPhotoUrl: photoUrl  // Company Logo / Seeker Photo is stored here
+        authorPhotoUrl: photoUrl  // Guaranteed to have an image URL
     }
 };
 
-// 2. This function fetches the entire feed and ensures the displayed profile 
-// details are up-to-date by using the populated User data.
+// 2. Fetches the entire feed and ensures profile details are up-to-date.
 export const getBlogPost = async (req, res) => {
     const posts = await BlogPost.find({})
         .sort({ createdAt: -1 })
         .populate({
             path: 'authorId',
-            // Select all fields needed for profile DISPLAY and Company DETAILS
-            // Note: 'name' and 'photoUrl' are included to fix the display issue.
+            // Select all fields, including the critical 'name', 'photoUrl', and 'email'
             select: 'name photoUrl description website contactInfo officeAddress email', 
         });
         
@@ -39,13 +36,24 @@ export const getBlogPost = async (req, res) => {
 
         if (postObject.authorId) {
             
-            // 💡 FIX: Overwrite the static authorName/authorPhotoUrl on the post
-            // document with the CURRENT name and photo from the User document (authorId).
-            postObject.authorName = postObject.authorId.name || postObject.authorName;
-            postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl || `https://i.pravatar.cc/150?u=${postObject.authorId.email}`;
+            // 💡 FIX: Robust Fallback Logic for Name
+            // 1. Try populated User name
+            // 2. Fallback to static post name
+            // 3. Fallback to generic text based on role
+            postObject.authorName = postObject.authorId.name 
+                || postObject.authorName 
+                || (postObject.authorRole === 'company' ? 'Unknown Company' : 'Unknown User');
+
+            // 💡 FIX: Robust Fallback Logic for Photo
+            // 1. Try populated User photoUrl
+            // 2. Fallback to static post photoUrl
+            // 3. Fallback to generated avatar URL using email
+            const emailForAvatar = postObject.authorId.email;
+            const fallbackPhoto = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
+            postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl || fallbackPhoto;
 
             if (postObject.authorRole === 'company') {
-                // Attach additional company details (these were the only fields correctly populated before)
+                // Attach additional company details (no change)
                 postObject.companyDescription = postObject.authorId.description;
                 postObject.companyWebsite = postObject.authorId.website;
                 postObject.companyContactInfo = postObject.authorId.contactInfo;
@@ -73,12 +81,50 @@ export const createBlogPost = async (req, res) => {
     const newPosts = new BlogPost({
         ...userDetails, 
         content
-    })
-    const createPost = await newPosts.save()
+    });
+    
+    // 1. Save the raw post
+    let createdPost = await newPosts.save();
 
-    res.status(201).json({ message: "New Blog Post Created", post: createPost })
-    return;
-}
+    // 💡 FIX 1: Explicitly populate the User details after saving so the response has the current profile data.
+    createdPost = await createdPost.populate({
+        path: 'authorId',
+        select: 'name photoUrl description website contactInfo officeAddress email',
+    });
+
+    // 2. Transform the single post document using the same robust logic as getBlogPost
+    const postObject = createdPost.toObject({ virtuals: true });
+    
+    // Apply the profile overwrites using the populated data
+    if (postObject.authorId) {
+        const populatedUser = postObject.authorId;
+        const emailForAvatar = populatedUser.email;
+        const defaultAvatar = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
+
+        postObject.authorName = populatedUser.name 
+            || postObject.authorName 
+            || (postObject.authorRole === 'company' ? 'Unknown Company' : 'Unknown User');
+
+        postObject.authorPhotoUrl = populatedUser.photoUrl 
+            || postObject.authorPhotoUrl 
+            || defaultAvatar;
+
+        if (postObject.authorRole === 'company') {
+            postObject.companyDescription = populatedUser.description;
+            postObject.companyWebsite = populatedUser.website;
+            postObject.companyContactInfo = populatedUser.contactInfo;
+            postObject.companyOfficeAddress = populatedUser.officeAddress;
+        }
+    }
+    
+    delete postObject.authorId; 
+    
+    // 3. Send the fully structured post to the frontend
+    res.status(201).json({ 
+        message: "New Blog Post Created", 
+        post: postObject // <-- Sending the fully prepared postObject
+    });
+};
 
 export const updateBlogPost = async (req, res) => {
     const postId = req.params.id;
