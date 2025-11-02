@@ -48,6 +48,9 @@ const blogSchema = new mongoose.Schema({
         enum : ['seeker' , 'company' , 'admin'],
         required : true 
     },
+    imageUrl : { 
+        type : String, 
+    },
     authorName : {
   type : String , 
   required : true

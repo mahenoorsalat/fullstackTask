@@ -4,20 +4,28 @@ import User from "../models/userModels.js"
 
 // 1. Prepares the data for NEW posts and comments.
 export const getUserDetails = async (userId) => {
-    // Select the generic fields used by all roles, plus the role and email
-    const user = await User.findById(userId).select('name email role photoUrl'); // cite: mahenoorsalat/fullstacktask/fullstackTask-e7a39308b4d3642372b8bfd4b87a86b67f8bf5db/models/userModels.js
+    // FIX 1: Ensure we select company-specific fields ('description', 'website') 
+    // in case 'name' is empty for companies.
+    const user = await User.findById(userId).select('name email role photoUrl description website'); 
 
     if (!user) return null;
 
-    // Use name and photoUrl directly, adding a fallback to 'Anonymous' if 'name' is empty
-    const authorName = user.name || (user.role === 'company' ? 'Unknown Company' : 'Anonymous User');
+    let authorName;
+    
+    if (user.role === 'company') {
+        // FIX 2: Prioritize user.name, then fallback to description, then website
+        authorName = user.name || user.description || user.website || 'Unknown Company';
+    } else {
+        authorName = user.name || 'Anonymous User';
+    }
+
     const photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
 
     return {
         authorId: user.id,
-        authorName: authorName, // Guaranteed to have a value
+        authorName: authorName, 
         authorRole: user.role,
-        authorPhotoUrl: photoUrl  // Guaranteed to have an image URL
+        authorPhotoUrl: photoUrl  
     }
 };
 
@@ -27,7 +35,7 @@ export const getBlogPost = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate({
             path: 'authorId',
-            // Select all fields, including the critical 'name', 'photoUrl', and 'email'
+            // Select all required fields
             select: 'name photoUrl description website contactInfo officeAddress email', 
         });
         
@@ -35,29 +43,31 @@ export const getBlogPost = async (req, res) => {
         const postObject = post.toObject({ virtuals: true }); 
 
         if (postObject.authorId) {
+            const populatedUser = postObject.authorId;
             
-            // 💡 FIX: Robust Fallback Logic for Name
-            // 1. Try populated User name
-            // 2. Fallback to static post name
-            // 3. Fallback to generic text based on role
-            postObject.authorName = postObject.authorId.name 
+            // FIX 3: Apply robust fallback for Name on existing posts.
+            let newAuthorName = populatedUser.name;
+            
+            if (postObject.authorRole === 'company') {
+                // Check for company name in description or website if primary name is empty.
+                newAuthorName = populatedUser.name || populatedUser.description || populatedUser.website;
+            }
+            
+            postObject.authorName = newAuthorName 
                 || postObject.authorName 
                 || (postObject.authorRole === 'company' ? 'Unknown Company' : 'Unknown User');
 
-            // 💡 FIX: Robust Fallback Logic for Photo
-            // 1. Try populated User photoUrl
-            // 2. Fallback to static post photoUrl
-            // 3. Fallback to generated avatar URL using email
-            const emailForAvatar = postObject.authorId.email;
+            // Robust Fallback Logic for Photo
+            const emailForAvatar = populatedUser.email;
             const fallbackPhoto = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
-            postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl || fallbackPhoto;
+            postObject.authorPhotoUrl = populatedUser.photoUrl || postObject.authorPhotoUrl || fallbackPhoto;
 
             if (postObject.authorRole === 'company') {
-                // Attach additional company details (no change)
-                postObject.companyDescription = postObject.authorId.description;
-                postObject.companyWebsite = postObject.authorId.website;
-                postObject.companyContactInfo = postObject.authorId.contactInfo;
-                postObject.companyOfficeAddress = postObject.authorId.officeAddress;
+                // Attach additional company details
+                postObject.companyDescription = populatedUser.description;
+                postObject.companyWebsite = populatedUser.website;
+                postObject.companyContactInfo = populatedUser.contactInfo;
+                postObject.companyOfficeAddress = populatedUser.officeAddress;
             }
         }
         
@@ -70,7 +80,8 @@ export const getBlogPost = async (req, res) => {
 }
 
 export const createBlogPost = async (req, res) => {
-    const { content } = req.body;
+    // 💡 CHANGE 1: Destructure imageUrl from req.body to accept it from the client
+    const { content, imageUrl } = req.body;
     const userDetails = await getUserDetails(req.user._id); 
 
     if (!userDetails) {
@@ -80,13 +91,15 @@ export const createBlogPost = async (req, res) => {
 
     const newPosts = new BlogPost({
         ...userDetails, 
-        content
+        content,
+        // 💡 CHANGE 2: Save the provided imageUrl to the database
+        imageUrl 
     });
     
     // 1. Save the raw post
     let createdPost = await newPosts.save();
 
-    // 💡 FIX 1: Explicitly populate the User details after saving so the response has the current profile data.
+    // Explicitly populate the User details after saving so the response has the current profile data.
     createdPost = await createdPost.populate({
         path: 'authorId',
         select: 'name photoUrl description website contactInfo officeAddress email',
@@ -100,8 +113,15 @@ export const createBlogPost = async (req, res) => {
         const populatedUser = postObject.authorId;
         const emailForAvatar = populatedUser.email;
         const defaultAvatar = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
+        
+        // FIX 4: Apply robust fallback for Name on newly created post object.
+        let newAuthorName = populatedUser.name;
+            
+        if (postObject.authorRole === 'company') {
+            newAuthorName = populatedUser.name || populatedUser.description || populatedUser.website;
+        }
 
-        postObject.authorName = populatedUser.name 
+        postObject.authorName = newAuthorName
             || postObject.authorName 
             || (postObject.authorRole === 'company' ? 'Unknown Company' : 'Unknown User');
 
@@ -128,7 +148,8 @@ export const createBlogPost = async (req, res) => {
 
 export const updateBlogPost = async (req, res) => {
     const postId = req.params.id;
-    const { content } = req.body;
+    // 💡 CHANGE 3: Destructure imageUrl from req.body to allow updating it
+    const { content, imageUrl } = req.body;
     const post = await BlogPost.findById(postId)
     if (!post) {
         res.status(404);
@@ -138,7 +159,16 @@ export const updateBlogPost = async (req, res) => {
         res.status(403);
         throw new Error('Not Authorized to update this post ')
     }
+    
+    // Update content (original logic preserved)
     post.content = content || post.content;
+    
+    // 💡 CHANGE 4: Update imageUrl if it is present in the request body. 
+    // This allows setting it to null or "" to clear the image.
+    if (imageUrl !== undefined) {
+        post.imageUrl = imageUrl;
+    }
+    
     const updatedPost = await post.save()
     res.json(updatedPost)
     return;
