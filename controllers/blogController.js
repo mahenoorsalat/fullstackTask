@@ -3,18 +3,26 @@ import User from "../models/userModels.js"
 
 
 export const getUserDetails = async (userId) => {
-    const user = await User.findById(userId).select('name email role photoUrl');
+    const user = await User.findById(userId).select('name email role photoUrl companyName logoUrl');
 
     if (!user) return null;
 
-    const photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
+    let authorName;
+    let authorPhotoUrl;
+
+    if (user.role === 'company' && user.companyName) {
+        authorName = user.companyName;
+        authorPhotoUrl = user.logoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
+    } else {
+        authorName = user.name || 'Anonymous User';
+        authorPhotoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
+    }
 
     return {
         authorId: user.id,
-        authorName: user.name,
+        authorName: authorName,
         authorRole: user.role,
-      
-        authorPhotoUrl: photoUrl  
+        authorPhotoUrl: authorPhotoUrl 
     }
 };
 
@@ -23,19 +31,32 @@ export const getBlogPost = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate({
             path: 'authorId',
-            select: 'description website contactInfo officeAddress', // Select company profile fields
+            // 💡 FIX 3: Select ALL relevant fields: static name/photo (for correction), company name/logo (for correction) and other company details.
+            select: 'name photoUrl companyName logoUrl description website contactInfo officeAddress', 
         });
         
     const transformedPosts = posts.map(post => {
         const postObject = post.toObject({ virtuals: true }); 
 
-        if (postObject.authorId && postObject.authorRole === 'company') {
-            postObject.companyDescription = postObject.authorId.description;
-            postObject.companyWebsite = postObject.authorId.website;
-            postObject.companyContactInfo = postObject.authorId.contactInfo;
-            postObject.companyOfficeAddress = postObject.authorId.officeAddress;
-        }
+        if (postObject.authorId) {
+            
+            
+            if (postObject.authorRole === 'company') {
+                postObject.authorName = postObject.authorId.companyName || postObject.authorName;
+                postObject.authorPhotoUrl = postObject.authorId.logoUrl || postObject.authorPhotoUrl;
 
+                postObject.companyDescription = postObject.authorId.description;
+                postObject.companyWebsite = postObject.authorId.website;
+                postObject.companyContactInfo = postObject.authorId.contactInfo;
+                postObject.companyOfficeAddress = postObject.authorId.officeAddress;
+
+            } else {
+                postObject.authorName = postObject.authorId.name || postObject.authorName;
+                postObject.authorPhotoUrl = postObject.authorId.photoUrl || postObject.authorPhotoUrl;
+            }
+        }
+        
+        postObject.id = postObject._id;
         delete postObject.authorId; 
         
         return postObject;
