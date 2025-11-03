@@ -6,5 +6,7 @@ const router = express.Router();
 
 // GET /api/user?role=seeker or /api/user?role=company
 router.route('/').get(protect, getUsersByRole); 
+router.route('/admin/users').get(protect, admin, getAllUsers);
+router.route('/admin/users/:id').delete(protect, admin, deleteUser);
 
 export default router;

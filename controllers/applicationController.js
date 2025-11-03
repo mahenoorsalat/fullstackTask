@@ -28,7 +28,7 @@ export const applyToJob = async (req, res) => {
 const application = await Application.create({
         jobId,
         seekerId,
-        status: 'Shortlisted' 
+        status: 'Applied' 
     })
 
     await Job.findByIdAndUpdate(jobId, {

@@ -35,7 +35,7 @@ export const role = (...roles) =>{
 }
 
 export const admin = async (req, res , next)=>{
-    if ( req.user.role === "role"){
+    if ( req.user.role === "admin"){
         next()
     }
     else{
@@ -45,7 +45,7 @@ export const admin = async (req, res , next)=>{
 }
 
 export const employer = async (req, res, next )=>{
-    if(req.user && req.user.role === "employer"){
+    if(req.user && req.user.role === "company"){
         next();
     }   else{
         res.status(403)

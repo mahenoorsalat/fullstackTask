@@ -30,7 +30,7 @@ export const getJobById = async(req , res) =>{
     const job = await Job.findById(req.params.id).populate('employerId');
 
     if(job){
-        res.job(job);
+        res.json(job);
     }else{
         res.status(404);
         throw new Error('Job Not Found ')
@@ -91,9 +91,12 @@ export const deleteJob = async(req , res)=>{
     const job = await Job.findById(req.params.id);
 
     if(job){
-        if(req.user.role === 'admin' || job.employerId.toString() !== req.user._id.toString()){
-          await Job.deleteOne({id: job._id})
-          res.json('job removed')
+        const isOwner = job.employerId.toString() === req.user._id.toString();
+
+        if(req.user.role === 'admin' || isOwner){
+          await job.deleteOne(); 
+          await Application.deleteMany({ jobId: req.params.id }); 
+          res.json('Job and all associated applications removed successfully')
         }
         else{
             res.status(403)
@@ -101,7 +104,7 @@ export const deleteJob = async(req , res)=>{
         }
     }
     else{
-res.status(404);
+        res.status(404);
         throw new Error('Job not found');
    };
 };

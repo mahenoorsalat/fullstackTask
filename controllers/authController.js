@@ -64,8 +64,6 @@ export const getUsersByRole = async (req, res) => {
 };
 
 
-
-
 export const loginUser = async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -188,6 +186,7 @@ export const getAllUser = async (req , res)=>{
         res.status(500).json({message : "server error : failed to fetch users "})
     }
 };
+
 export const deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
