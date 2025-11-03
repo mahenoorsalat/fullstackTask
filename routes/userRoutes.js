@@ -1,6 +1,7 @@
 import express from 'express';
 import { getUsersByRole } from '../controllers/authController.js'; 
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, admin } from '../middleware/authMiddleware.js'; 
+import { getAllUsers, deleteUser } from '../controllers/authController.js'; 
 
 const router = express.Router();
 
