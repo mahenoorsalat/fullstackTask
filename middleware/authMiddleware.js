@@ -33,3 +33,31 @@ export const role = (...roles) =>{
         next();
     }
 }
+
+export const admin = async (req, res , next)=>{
+    if ( req.user.role === "role"){
+        next()
+    }
+    else{
+        res.status(403)
+        throw new Error("Not authorized as an admin")
+    }
+}
+
+export const employer = async (req, res, next )=>{
+    if(req.user && req.user.role === "employer"){
+        next();
+    }   else{
+        res.status(403)
+        throw new Error("Not authorized as an employer")
+    }
+}
+export const seeker = async(req , res , next)=>{
+    if(req.user && req.user.role === 'seeker'){
+        next()
+    }
+     else{
+        res.status(403)
+        throw new Error("Not authorized as an seeker")
+    }
+}

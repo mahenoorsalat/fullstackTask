@@ -179,3 +179,26 @@ export const updateUserProfile =async (req, res) => {
     }
     
 };
+
+export const getAllUser = async (req , res)=>{
+    try{
+        const users = await User.find({}).select('-password').sort({createdAt : -1});
+        res.json(users)
+    }catch(error){
+        res.status(500).json({message : "server error : failed to fetch users "})
+    }
+};
+export const deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (user) {
+            await user.deleteOne();
+            res.json({ message: 'User removed successfully' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error: Failed to delete user' });
+    }
+};
