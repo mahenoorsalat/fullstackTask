@@ -1,8 +1,26 @@
 import Job from "../models/jobModels.js";
-
+import User from "../models/userModels.js"; // <--- Add this import!
+import Application from "../models/ApplicationModel.js";
 export const getJobs = async(req,res)=>{
-    const {keyword , location , type , minSalary }  = req.query;
+    // Add companyName to destructuring
+    const {keyword , location , type , minSalary, companyName }  = req.query; 
     const query = {};
+    
+    if (companyName) {
+        const matchingEmployers = await User.find({
+            role: 'company',
+            name: { $regex: companyName, $options: 'i' }
+        }).select('_id');
+
+        const employerIds = matchingEmployers.map(employer => employer._id);
+
+        if (employerIds.length > 0) {
+            query.employerId = { $in: employerIds };
+        } else {
+            query.employerId = null;
+        }
+    }
+
     if(keyword){
         query.title = {$regex : keyword  , $options : 'i'};
     };
@@ -22,8 +40,7 @@ export const getJobs = async(req,res)=>{
         select:'name email logo'
     })
     .sort({created: -1})
-res.json(jobs);
-
+    res.json(jobs);
 };
 
 export const getJobById = async(req , res) =>{

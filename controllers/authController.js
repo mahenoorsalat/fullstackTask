@@ -65,44 +65,51 @@ export const getUsersByRole = async (req, res) => {
 
 
 export const loginUser = async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, password, role } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Please provide both email and password" });
-  }
+  if (!email || !password) {
+    return res.status(400).json({ message: "Please provide both email and password" });
+  }
 
-  try {
-    const user = await User.findOne({ email }).select('+password');
+  try {
+    const user = await User.findOne({ email }).select('+password');
 
-    if (!user) return res.status(401).json({ message: "Invalid email or password" });
-    if (!user.password) return res.status(500).json({ message: "User password missing in DB" });
+    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    if (!user.password) return res.status(500).json({ message: "User password missing in DB" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
 
-    if (user.role !== role) {
-      return res.status(401).json({ message: "Unauthorized: Role mismatch" });
-    }
+    // FIX: Allow admin users to log in regardless of the role sent in the body.
+    // The client is always returned the actual user.role.
+    if (user.role !== role && user.role !== 'admin') {
+      // The original check remains for non-admin users (seeker/company)
+      return res.status(401).json({ message: "Unauthorized: Role mismatch" });
+    }
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      token: generateToken(user._id),
-      photoUrl: user.photoUrl,
-      resumeUrl: user.resumeUrl,
-      skills: user.skills,
-      expectedSalary: user.expectedSalary,
-      website: user.website,
-      contactInfo: user.contactInfo,
-      officeAddress: user.officeAddress,
-      description: user.description,
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
+    // CRITICAL: Ensure the role sent back to the client is always the role from the DB.
+    const finalRole = user.role;
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: finalRole, // Use the actual role from the database
+      token: generateToken(user._id),
+      photoUrl: user.photoUrl,
+      resumeUrl: user.resumeUrl,
+// ... (rest of user profile fields)
+      skills: user.skills,
+      expectedSalary: user.expectedSalary,
+      website: user.website,
+      contactInfo: user.contactInfo,
+      officeAddress: user.officeAddress,
+      description: user.description,
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 export const getUserProfile = (req, res) => {
