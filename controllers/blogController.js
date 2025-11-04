@@ -2,9 +2,7 @@ import BlogPost from "../models/BlogPostModel.js";
 import User from "../models/userModels.js"
 
 
-// 1. Prepares the data for NEW posts and comments.
 export const getUserDetails = async (userId) => {
-    // 💡 FIX 1: Added 'logo' to the select statement to fetch company logo.
     const user = await User.findById(userId).select('name email role photoUrl description website logo'); 
 
     if (!user) return null;
@@ -12,19 +10,15 @@ export const getUserDetails = async (userId) => {
     let authorName;
     
     if (user.role === 'company') {
-        // FIX 2: Prioritize user.name, then fallback to description, then website
         authorName = user.name || user.description || user.website || 'Unknown Company';
     } else {
         authorName = user.name || 'Anonymous User';
     }
 
-    // Conditional photo logic now correctly uses user.logo
     let photoUrl;
     if (user.role === 'company') {
-        // Prioritize logo, then fall back to a generic avatar based on the company name
         photoUrl = user.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0D83DD&color=fff&size=128`;
     } else {
-        // For seekers, use photoUrl or the pravatar fallback based on email
         photoUrl = user.photoUrl || `https://i.pravatar.cc/150?u=${user.email}`;
     }
 
@@ -36,13 +30,11 @@ export const getUserDetails = async (userId) => {
     }
 };
 
-// 2. Fetches the entire feed and ensures profile details are up-to-date.
 export const getBlogPost = async (req, res) => {
     const posts = await BlogPost.find({})
         .sort({ createdAt: -1 })
         .populate({
             path: 'authorId',
-            // 💡 FIX 2: Added 'logo' to the select for populate to ensure logos are available on the feed.
             select: 'name photoUrl description website contactInfo officeAddress email logo', 
         });
         
@@ -52,11 +44,9 @@ export const getBlogPost = async (req, res) => {
         if (postObject.authorId) {
             const populatedUser = postObject.authorId;
             
-            // FIX 3: Apply robust fallback for Name on existing posts.
             let newAuthorName = populatedUser.name;
             
             if (postObject.authorRole === 'company') {
-                // Check for company name in description or website if primary name is empty.
                 newAuthorName = populatedUser.name || populatedUser.description || populatedUser.website;
             }
             
@@ -64,7 +54,6 @@ export const getBlogPost = async (req, res) => {
                 || postObject.authorName 
                 || (postObject.authorRole === 'company' ? 'Unknown Company' : 'Unknown User');
 
-            // Robust Fallback Logic for Photo, prioritizing logo for companies
             const emailForAvatar = populatedUser.email;
             let fallbackPhoto;
 
@@ -74,11 +63,9 @@ export const getBlogPost = async (req, res) => {
                 fallbackPhoto = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
             }
             
-            // Note: If postObject.authorPhotoUrl exists from the BlogPost model (old data), it is still prioritized.
             postObject.authorPhotoUrl = populatedUser.photoUrl || postObject.authorPhotoUrl || fallbackPhoto;
 
             if (postObject.authorRole === 'company') {
-                // Attach additional company details
                 postObject.companyDescription = populatedUser.description;
                 postObject.companyWebsite = populatedUser.website;
                 postObject.companyContactInfo = populatedUser.contactInfo;
@@ -95,7 +82,6 @@ export const getBlogPost = async (req, res) => {
 }
 
 export const createBlogPost = async (req, res) => {
-    // CHANGE 1: Destructure imageUrl from req.body to accept it from the client
     const { content, imageUrl } = req.body;
     const userDetails = await getUserDetails(req.user._id); 
 
@@ -107,29 +93,22 @@ export const createBlogPost = async (req, res) => {
     const newPosts = new BlogPost({
         ...userDetails, 
         content,
-        // CHANGE 2: Save the provided imageUrl to the database
         imageUrl 
     });
     
-    // 1. Save the raw post
     let createdPost = await newPosts.save();
 
-    // Explicitly populate the User details after saving so the response has the current profile data.
     createdPost = await createdPost.populate({
         path: 'authorId',
-        // 💡 FIX 3: Added 'logo' to the select for the new post response.
         select: 'name photoUrl description website contactInfo officeAddress email logo',
     });
 
-    // 2. Transform the single post document using the same robust logic as getBlogPost
     const postObject = createdPost.toObject({ virtuals: true });
     
-    // Apply the profile overwrites using the populated data
     if (postObject.authorId) {
         const populatedUser = postObject.authorId;
         const emailForAvatar = populatedUser.email;
         
-        // Use same photo logic as getBlogPost for response
         let defaultAvatar;
         if (postObject.authorRole === 'company') {
             defaultAvatar = populatedUser.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(populatedUser.name || 'Company')}&background=0D83DD&color=fff&size=128`;
@@ -137,7 +116,6 @@ export const createBlogPost = async (req, res) => {
             defaultAvatar = `https://i.pravatar.cc/150?u=${emailForAvatar}`;
         }
         
-        // FIX 4: Apply robust fallback for Name on newly created post object.
         let newAuthorName = populatedUser.name;
             
         if (postObject.authorRole === 'company') {
@@ -162,16 +140,15 @@ export const createBlogPost = async (req, res) => {
     
     delete postObject.authorId; 
     
-    // 3. Send the fully structured post to the frontend
+    
     res.status(201).json({ 
         message: "New Blog Post Created", 
-        post: postObject // <-- Sending the fully prepared postObject
+        post: postObject 
     });
 };
 
 export const updateBlogPost = async (req, res) => {
     const postId = req.params.id;
-    // CHANGE 3: Destructure imageUrl from req.body to allow updating it
     const { content, imageUrl } = req.body;
     const post = await BlogPost.findById(postId)
     if (!post) {
@@ -183,11 +160,9 @@ export const updateBlogPost = async (req, res) => {
         throw new Error('Not Authorized to update this post ')
     }
     
-    // Update content (original logic preserved)
     post.content = content || post.content;
     
-    // CHANGE 4: Update imageUrl if it is present in the request body. 
-    // This allows setting it to null or "" to clear the image.
+
     if (imageUrl !== undefined) {
         post.imageUrl = imageUrl;
     }

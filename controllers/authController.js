@@ -80,25 +80,21 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
 
-    // FIX: Allow admin users to log in regardless of the role sent in the body.
-    // The client is always returned the actual user.role.
+  
     if (user.role !== role && user.role !== 'admin') {
-      // The original check remains for non-admin users (seeker/company)
       return res.status(401).json({ message: "Unauthorized: Role mismatch" });
     }
 
-    // CRITICAL: Ensure the role sent back to the client is always the role from the DB.
     const finalRole = user.role;
 
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
-      role: finalRole, // Use the actual role from the database
+      role: finalRole, 
       token: generateToken(user._id),
       photoUrl: user.photoUrl,
       resumeUrl: user.resumeUrl,
-// ... (rest of user profile fields)
       skills: user.skills,
       expectedSalary: user.expectedSalary,
       website: user.website,
@@ -202,9 +198,16 @@ export const deleteUser = async (req, res) => {
             await user.deleteOne();
             res.json({ message: 'User removed successfully' });
         } else {
+            // Correctly handles valid ID format but no matching user
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
+        // Correctly handles invalid ID format (CastError)
+        if (error.name === 'CastError') {
+            return res.status(404).json({ message: 'User not found (Invalid ID format)' });
+        }
+        
+        // Fallback for true server errors
         res.status(500).json({ message: 'Server error: Failed to delete user' });
     }
 };
