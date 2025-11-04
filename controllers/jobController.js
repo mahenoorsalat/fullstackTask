@@ -1,11 +1,13 @@
 import Job from "../models/jobModels.js";
-import User from "../models/userModels.js"; // <--- Add this import!
+import User from "../models/userModels.js"; 
 import Application from "../models/ApplicationModel.js";
+
 export const getJobs = async(req,res)=>{
-    // Add companyName to destructuring
-    const {keyword , location , type , minSalary, companyName }  = req.query; 
+    // FIX 1: Removed 'location', Added 'experienceLevel'
+    const {keyword , type , minSalary, companyName, experienceLevel }  = req.query; 
     const query = {};
     
+    // 1. Company Name Filter (Correct)
     if (companyName) {
         const matchingEmployers = await User.find({
             role: 'company',
@@ -17,22 +19,33 @@ export const getJobs = async(req,res)=>{
         if (employerIds.length > 0) {
             query.employerId = { $in: employerIds };
         } else {
+            // This ensures no jobs are returned if no company name matches
             query.employerId = null;
         }
     }
 
+    // FIX 2: Keyword Filter: Search Title OR Location using $or
     if(keyword){
-        query.title = {$regex : keyword  , $options : 'i'};
-    };
-    if(location){
-        query.location = {$regex : location , $options : 'i'};
-    };
+        query.$or = [
+            { title: { $regex: keyword, $options: 'i' } },
+            { location: { $regex: keyword, $options: 'i' } }
+        ];
+    }
+    
+    // 3. Job Type Filter (Correct)
     if(type){
         query.jobType = type;
     };
+    
+    // 4. Min Salary Filter (Correct)
     if(minSalary){
         query.salaryMin = { $gte : Number(minSalary)}
     };
+
+    // FIX 3: Experience Level Filter (NEW)
+    if(experienceLevel){
+        query.experienceLevel = experienceLevel;
+    }
 
     const jobs = await Job.find(query)
     .populate({
